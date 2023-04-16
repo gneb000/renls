@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::path::PathBuf;
+
 use clap::Parser;
 
 fn txt_ren(dir_path: &str, text_file_path: &str, dry_run: bool) {
@@ -31,58 +32,53 @@ fn load_text_file_content(file_path: &str) -> Vec<String> {
         .collect()
 }
 
-fn get_file_list(dir_path: &str) -> Vec<String> {
+fn get_file_list(dir_path: &str) -> Vec<PathBuf> {
     let paths = fs::read_dir(dir_path).expect("Error: Unable to load provided path.");
-    let mut file_list: Vec<String> = paths
+    let mut file_list: Vec<PathBuf> = paths
         .into_iter()
-        .map(|p| p.unwrap().path().to_str().unwrap().to_string())
+        .map(|p| p.unwrap().path())
         .collect();
     file_list.sort();
     file_list
 }
 
-fn make_rename_pair(new_name_list: Vec<String>, file_list: Vec<String>) -> HashMap<String, String> {
-    let mut rename_pairs = HashMap::new();
+fn make_rename_pair(new_name_list: Vec<String>, file_list: Vec<PathBuf>) -> HashMap<PathBuf, PathBuf> {
     file_list
         .iter()
         .enumerate()
-        .map(|(i, n)| {
-            let file_path = Path::new(n);
-            let file_ext = ".".to_owned() + file_path.extension().unwrap().to_str().unwrap();
-            let parent_dir = file_path.parent().unwrap();
-            let new_name= new_name_list.get(i).unwrap().to_owned() + &file_ext;
-            let new_path = parent_dir.join(new_name).to_str().unwrap().to_string();
-            rename_pairs.insert(n.clone(), new_path);
+        .map(|(i, f)| {
+            let new_filename = format!("{}{}{}", new_name_list.get(i).unwrap(), ".",
+                                       f.extension().unwrap().to_string_lossy());
+            let new_filepath = f.parent().unwrap().join(new_filename);
+            return (f.to_owned(), new_filepath);
         })
-        .count();
-    rename_pairs
+        .collect()
 }
 
-fn print_rename_proposal(rename_pairs: HashMap<String, String>) {
+fn print_rename_proposal(rename_pairs: HashMap<PathBuf, PathBuf>) {
     rename_pairs
         .iter()
-        .map(|(k, v)| println!("{} --> {}", k, v))
-        .count();
+        .for_each(|(k, v)| println!("{} --> {}", k.display(), v.display()));
 }
 
-fn rename_files(rename_pairs: HashMap<String, String>) {
+fn rename_files(rename_pairs: HashMap<PathBuf, PathBuf>) {
     rename_pairs
         .iter()
-        .map(|(k, v)| fs::rename(k, v))
-        .count();
+        .for_each(|(k, v)| fs::rename(k, v)
+            .expect("Error: Unable to fulfill renaming operation."));
 }
 
 /// txtren: rename all files in a directory with a list of names in a text file
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// path: path to directory with files to be renamed
+    /// path to directory with files to be renamed
     #[arg(short, long)]
     path: String,
-    /// file: path to file with new name list
+    /// path to file with new name list
     #[arg(short, long)]
     file: String,
-    /// dry_run: show rename proposal but do not apply
+    /// show rename proposal but do not apply
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
     dry_run: bool,
 }
