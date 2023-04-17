@@ -16,27 +16,8 @@ struct Args {
     #[arg(short, long)]
     file: String,
     /// show rename proposal but do not apply
-    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    #[arg(short = 'n', long, action = clap::ArgAction::SetTrue)]
     dry_run: bool,
-}
-
-/// Rename all files in a directory with a list of names in a text file
-fn renls(dir_path: &str, text_file_path: &str, dry_run: bool) {
-    let new_name_list = load_text_file_content(text_file_path);
-    let ren_file_list = get_file_list(dir_path);
-
-    if new_name_list.len() != ren_file_list.len() {
-        println!("Error: File list and new name list do not have the same number of items.");
-        return;
-    }
-
-    let rename_pairs = make_rename_pair(new_name_list, ren_file_list);
-
-    if dry_run {
-        print_rename_proposal(rename_pairs);
-    } else {
-        rename_files(rename_pairs);
-    }
 }
 
 /// Returns vector with each line read from provided file, ignores empty or comment ('#') lines
@@ -91,5 +72,19 @@ fn rename_files(rename_pairs: HashMap<PathBuf, PathBuf>) {
 
 fn main() {
     let args = Args::parse();
-    renls(&args.path, &args.file, args.dry_run);
+
+    let new_name_list = load_text_file_content(&args.file);
+    let ren_file_list = get_file_list(&args.path);
+    if new_name_list.len() != ren_file_list.len() {
+        println!("Error: File list and new name list do not have the same number of items.");
+        return;
+    }
+
+    let rename_pairs = make_rename_pair(new_name_list, ren_file_list);
+
+    if args.dry_run {
+        print_rename_proposal(rename_pairs);
+    } else {
+        rename_files(rename_pairs);
+    }
 }
