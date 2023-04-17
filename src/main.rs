@@ -1,19 +1,19 @@
 use std::{fs, io};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 use std::path::PathBuf;
 
 use clap::Parser;
 
-/// renls: rename all files in a directory with a list of names in a text file
+/// renls: rename all files in a directory with a list of names in a file/stdin
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// path to directory with files to be renamed
     #[arg(short, long)]
     path: String,
-    /// path to file with new name list
+    /// path to file with new name list (optional if piped through stdin)
     #[arg(short, long, default_value_t = String::new())]
     file: String,
     /// show rename proposal but do not apply
@@ -23,31 +23,19 @@ struct Args {
 
 /// Returns vector with new name list
 fn get_new_name_list(file_path: &str) -> Vec<String> {
-    if (file_path).is_empty() {
-        read_stdin_content()
-    } else {
-        load_text_file_content(file_path)
+    if !(file_path).is_empty() {
+        read_input_stream(File::open(file_path).expect("Error: Unable to read file."))
+    } else  {
+        if atty::is(atty::Stream::Stdin) {
+            panic!("Error: stdin buffer is empty.");
+        }
+        read_input_stream(io::stdin())
     }
 }
 
-/// Returns vector with each line read from stdin, ignores empty or comment ('#') lines
-fn read_stdin_content() -> Vec<String> {
-    if atty::is(atty::Stream::Stdin) {
-        return Vec::new()
-    }
-
-    io::stdin()
-        .lines()
-        .into_iter()
-        .filter(|l| !(l.as_ref().unwrap().is_empty() || l.as_ref().unwrap().starts_with('#')))
-        .map(|l| l.unwrap())
-        .collect()
-}
-
-/// Returns vector with each line read from provided file, ignores empty or comment ('#') lines
-fn load_text_file_content(file_path: &str) -> Vec<String> {
-    let file = File::open(file_path).expect("Error: Unable to read file.");
-    BufReader::new(file)
+/// Returns vector with each line read from provided input stream, ignores empty or comment ('#') lines
+fn read_input_stream<R: Read>(input_stream: R) -> Vec<String> {
+    BufReader::new(input_stream)
         .lines()
         .filter(|l| !(l.as_ref().unwrap().is_empty() || l.as_ref().unwrap().starts_with('#')))
         .map(|l| l.unwrap().trim().to_string())
