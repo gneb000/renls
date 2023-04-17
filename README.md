@@ -14,6 +14,3 @@ renls [OPTIONS] --path <PATH> --file <FILE>
 -h, --help         Print help
 -V, --version      Print version
 ```
-
-## TODO
-* Read new name list from stdin, making -f flag optional.

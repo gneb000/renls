@@ -1,5 +1,6 @@
+use std::{fs, io};
 use std::collections::HashMap;
-use std::fs;
+use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
@@ -13,16 +14,39 @@ struct Args {
     #[arg(short, long)]
     path: String,
     /// path to file with new name list
-    #[arg(short, long)]
+    #[arg(short, long, default_value_t = String::new())]
     file: String,
     /// show rename proposal but do not apply
     #[arg(short = 'n', long, action = clap::ArgAction::SetTrue)]
     dry_run: bool,
 }
 
+/// Returns vector with new name list
+fn get_new_name_list(file_path: &str) -> Vec<String> {
+    if (file_path).is_empty() {
+        read_stdin_content()
+    } else {
+        load_text_file_content(file_path)
+    }
+}
+
+/// Returns vector with each line read from stdin, ignores empty or comment ('#') lines
+fn read_stdin_content() -> Vec<String> {
+    if atty::is(atty::Stream::Stdin) {
+        return Vec::new()
+    }
+
+    io::stdin()
+        .lines()
+        .into_iter()
+        .filter(|l| !(l.as_ref().unwrap().is_empty() || l.as_ref().unwrap().starts_with('#')))
+        .map(|l| l.unwrap())
+        .collect()
+}
+
 /// Returns vector with each line read from provided file, ignores empty or comment ('#') lines
 fn load_text_file_content(file_path: &str) -> Vec<String> {
-    let file = fs::File::open(file_path).expect("Error: Unable to read file.");
+    let file = File::open(file_path).expect("Error: Unable to read file.");
     BufReader::new(file)
         .lines()
         .filter(|l| !(l.as_ref().unwrap().is_empty() || l.as_ref().unwrap().starts_with('#')))
@@ -73,7 +97,7 @@ fn rename_files(rename_pairs: HashMap<PathBuf, PathBuf>) {
 fn main() {
     let args = Args::parse();
 
-    let new_name_list = load_text_file_content(&args.file);
+    let new_name_list = get_new_name_list(&args.file);
     let ren_file_list = get_file_list(&args.path);
     if new_name_list.len() != ren_file_list.len() {
         println!("Error: File list and new name list do not have the same number of items.");
