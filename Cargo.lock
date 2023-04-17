@@ -204,6 +204,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "renls"
+version = "0.1.0"
+dependencies = [
+ "clap",
+]
+
+[[package]]
 name = "rustix"
 version = "0.37.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -232,13 +239,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "txtren"
-version = "0.1.0"
-dependencies = [
- "clap",
 ]
 
 [[package]]

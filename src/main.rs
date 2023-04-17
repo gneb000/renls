@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-/// txt-ren: rename all files in a directory with a list of names in a text file
+/// renls: rename all files in a directory with a list of names in a text file
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -21,7 +21,7 @@ struct Args {
 }
 
 /// Rename all files in a directory with a list of names in a text file
-fn txt_ren(dir_path: &str, text_file_path: &str, dry_run: bool) {
+fn renls(dir_path: &str, text_file_path: &str, dry_run: bool) {
     let new_name_list = load_text_file_content(text_file_path);
     let ren_file_list = get_file_list(dir_path);
 
@@ -91,5 +91,5 @@ fn rename_files(rename_pairs: HashMap<PathBuf, PathBuf>) {
 
 fn main() {
     let args = Args::parse();
-    txt_ren(&args.path, &args.file, args.dry_run);
+    renls(&args.path, &args.file, args.dry_run);
 }
