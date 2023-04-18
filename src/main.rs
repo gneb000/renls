@@ -24,10 +24,10 @@ struct Args {
 /// Returns vector with new name list
 fn get_new_name_list(file_path: &str) -> Vec<String> {
     if !(file_path).is_empty() {
-        read_input_stream(File::open(file_path).expect("Error: Unable to read file."))
+        read_input_stream(File::open(file_path).expect("error: unable to read file."))
     } else  {
         if atty::is(atty::Stream::Stdin) {
-            panic!("Error: stdin buffer is empty.");
+            panic!("error: stdin buffer is empty.");
         }
         read_input_stream(io::stdin())
     }
@@ -44,7 +44,7 @@ fn read_input_stream<R: Read>(input_stream: R) -> Vec<String> {
 
 /// Returns sorted paths of files within provided directory
 fn get_file_list(dir_path: &str) -> Vec<PathBuf> {
-    let paths = fs::read_dir(dir_path).expect("Error: Unable to load provided path.");
+    let paths = fs::read_dir(dir_path).expect("error: unable to load provided path");
     let mut file_list: Vec<PathBuf> = paths
         .into_iter()
         .map(|p| p.unwrap().path())
@@ -79,7 +79,7 @@ fn rename_files(rename_pairs: HashMap<PathBuf, PathBuf>) {
     rename_pairs
         .iter()
         .for_each(|(k, v)| fs::rename(k, v)
-            .expect("Error: Unable to fulfill renaming operation."));
+            .expect("error: unable to fulfill renaming operation"));
 }
 
 fn main() {
@@ -88,7 +88,7 @@ fn main() {
     let new_name_list = get_new_name_list(&args.file);
     let ren_file_list = get_file_list(&args.path);
     if new_name_list.len() != ren_file_list.len() {
-        println!("Error: File list and new name list do not have the same number of items.");
+        println!("error: file list and new name list do not have the same number of items");
         return;
     }
 
