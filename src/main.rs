@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-/// renls: rename all files in a directory with a list of names in a file/stdin
+/// renls: rename all files in a directory with a list of names from a file or stdin
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Args {
