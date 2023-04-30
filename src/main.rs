@@ -1,8 +1,8 @@
-use std::{fs, io};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::path::PathBuf;
+use std::{fs, io};
 
 use clap::Parser;
 
@@ -26,7 +26,7 @@ fn get_new_name_list(file_path: &str) -> Vec<String> {
     if (file_path).is_empty() {
         assert!(atty::isnt(atty::Stream::Stdin), "error: stdin buffer is empty.");
         read_input_stream(io::stdin())
-    } else  {
+    } else {
         read_input_stream(File::open(file_path).expect("error: unable to read file."))
     }
 }
@@ -67,9 +67,11 @@ fn make_rename_pair(new_name_list: &[String], file_list: &[PathBuf]) -> HashMap<
 
 /// Prints provided map with renaming proposal as (`old_name` --> `new_name`)
 fn print_rename_proposal(rename_pairs: &HashMap<PathBuf, PathBuf>) {
-    rename_pairs
-        .iter()
-        .for_each(|(k, v)| println!("{} --> {}", k.display(), v.display()));
+    let mut stream = BufWriter::new(io::stdout());
+    for (k, v) in rename_pairs.iter() {
+        stream.write_all(format!("{} --> {}\n", k.display(), v.display()).as_ref()).unwrap();
+    }
+    stream.flush().unwrap();
 }
 
 /// Applies rename operation defined in provided map with structure (`old_name`, `new_name`)
