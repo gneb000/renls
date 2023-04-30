@@ -23,13 +23,11 @@ struct Args {
 
 /// Returns vector with new name list
 fn get_new_name_list(file_path: &str) -> Vec<String> {
-    if !(file_path).is_empty() {
-        read_input_stream(File::open(file_path).expect("error: unable to read file."))
-    } else  {
-        if atty::is(atty::Stream::Stdin) {
-            panic!("error: stdin buffer is empty.");
-        }
+    if (file_path).is_empty() {
+        assert!(atty::isnt(atty::Stream::Stdin), "error: stdin buffer is empty.");
         read_input_stream(io::stdin())
+    } else  {
+        read_input_stream(File::open(file_path).expect("error: unable to read file."))
     }
 }
 
@@ -53,8 +51,8 @@ fn get_file_list(dir_path: &str) -> Vec<PathBuf> {
     file_list
 }
 
-/// Returns map with absolute paths and structure (old_name, new_name)
-fn make_rename_pair(new_name_list: Vec<String>, file_list: Vec<PathBuf>) -> HashMap<PathBuf, PathBuf> {
+/// Returns map with absolute paths and structure (`old_name`, `new_name`)
+fn make_rename_pair(new_name_list: &[String], file_list: &[PathBuf]) -> HashMap<PathBuf, PathBuf> {
     file_list
         .iter()
         .enumerate()
@@ -62,20 +60,20 @@ fn make_rename_pair(new_name_list: Vec<String>, file_list: Vec<PathBuf>) -> Hash
             let new_filename = format!("{}{}{}", new_name_list.get(i).unwrap(), ".",
                                        f.extension().unwrap().to_string_lossy());
             let new_filepath = f.parent().unwrap().join(new_filename);
-            (f.to_owned(), new_filepath)
+            (f.clone(), new_filepath)
         })
         .collect()
 }
 
-/// Prints provided map with renaming proposal as (old_name --> new_name)
-fn print_rename_proposal(rename_pairs: HashMap<PathBuf, PathBuf>) {
+/// Prints provided map with renaming proposal as (`old_name` --> `new_name`)
+fn print_rename_proposal(rename_pairs: &HashMap<PathBuf, PathBuf>) {
     rename_pairs
         .iter()
         .for_each(|(k, v)| println!("{} --> {}", k.display(), v.display()));
 }
 
-/// Applies rename operation defined in provided map with structure (old_name, new_name)
-fn rename_files(rename_pairs: HashMap<PathBuf, PathBuf>) {
+/// Applies rename operation defined in provided map with structure (`old_name`, `new_name`)
+fn rename_files(rename_pairs: &HashMap<PathBuf, PathBuf>) {
     rename_pairs
         .iter()
         .for_each(|(k, v)| fs::rename(k, v)
@@ -92,11 +90,11 @@ fn main() {
         return;
     }
 
-    let rename_pairs = make_rename_pair(new_name_list, ren_file_list);
+    let rename_pairs = make_rename_pair(&new_name_list, &ren_file_list);
 
     if args.dry_run {
-        print_rename_proposal(rename_pairs);
+        print_rename_proposal(&rename_pairs);
     } else {
-        rename_files(rename_pairs);
+        rename_files(&rename_pairs);
     }
 }
