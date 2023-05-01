@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{BufRead, BufReader, Read};
 use std::path::PathBuf;
 use std::{fs, io};
+use std::process::exit;
 
 use clap::Parser;
 
@@ -22,12 +23,18 @@ struct Args {
 }
 
 /// Returns vector with new name list
-fn get_new_name_list(file_path: &str) -> Vec<String> {
+fn get_new_name_list(file_path: &str) -> Result<Vec<String>, &str> {
     if (file_path).is_empty() {
-        assert!(atty::isnt(atty::Stream::Stdin), "error: stdin buffer is empty.");
-        read_input_stream(io::stdin())
+         if atty::isnt(atty::Stream::Stdin) {
+             Ok(read_input_stream(io::stdin()))
+         } else {
+             Err("error: stdin buffer is empty")
+         }
     } else {
-        read_input_stream(File::open(file_path).expect("error: unable to read file."))
+        match File::open(file_path) {
+            Ok(file) => Ok(read_input_stream(file)),
+            Err(_) => Err("error: unable to read file"),
+        }
     }
 }
 
@@ -35,20 +42,25 @@ fn get_new_name_list(file_path: &str) -> Vec<String> {
 fn read_input_stream<R: Read>(input_stream: R) -> Vec<String> {
     BufReader::new(input_stream)
         .lines()
-        .filter(|l| !(l.as_ref().unwrap().is_empty() || l.as_ref().unwrap().starts_with('#')))
+        .filter(|l| l.is_ok() && !(l.as_ref().unwrap().is_empty() || l.as_ref().unwrap().starts_with('#')))
         .map(|l| l.unwrap().trim().to_string())
         .collect()
 }
 
 /// Returns sorted paths of files within provided directory
-fn get_file_list(dir_path: &str) -> Vec<PathBuf> {
-    let paths = fs::read_dir(dir_path).expect("error: unable to load provided path");
-    let mut file_list: Vec<PathBuf> = paths
-        .into_iter()
-        .map(|p| p.unwrap().path())
-        .collect();
-    file_list.sort();
-    file_list
+fn get_file_list(dir_path: &str) -> Result<Vec<PathBuf>, &str>{
+    match fs::read_dir(dir_path) {
+        Ok(paths) => {
+            let mut file_list: Vec<PathBuf> = paths
+                .into_iter()
+                .filter(|p| Result::is_ok(p))
+                .map(|p| p.unwrap().path())
+                .collect();
+            file_list.sort();
+            Ok(file_list)
+        },
+        Err(_) => Err("error: unable to read directory"),
+    }
 }
 
 /// Returns map with absolute paths and structure (`old_name`, `new_name`)
@@ -57,8 +69,11 @@ fn make_rename_pair(new_name_list: &[String], file_list: &[PathBuf]) -> HashMap<
         .iter()
         .enumerate()
         .map(|(i, f)| {
-            let new_filename = format!("{}{}{}", new_name_list.get(i).unwrap(), ".",
-                                       f.extension().unwrap().to_string_lossy());
+            let ext_str = match f.extension() {
+                Some(ext) => format!(".{}", ext.to_str().unwrap_or("")),
+                None => String::new(),
+            };
+            let new_filename = format!("{}{}", &new_name_list[i], ext_str);
             let new_filepath = f.parent().unwrap().join(new_filename);
             (f.clone(), new_filepath)
         })
@@ -67,29 +82,40 @@ fn make_rename_pair(new_name_list: &[String], file_list: &[PathBuf]) -> HashMap<
 
 /// Prints provided map with renaming proposal as (`old_name` --> `new_name`)
 fn print_rename_proposal(rename_pairs: &HashMap<PathBuf, PathBuf>) {
-    let mut stream = BufWriter::new(io::stdout());
     for (k, v) in rename_pairs.iter() {
-        stream.write_all(format!("{} --> {}\n", k.display(), v.display()).as_ref()).unwrap();
+        println!("{} --> {}", k.display(), v.display());
     }
-    stream.flush().unwrap();
 }
 
 /// Applies rename operation defined in provided map with structure (`old_name`, `new_name`)
 fn rename_files(rename_pairs: &HashMap<PathBuf, PathBuf>) {
-    rename_pairs
-        .iter()
-        .for_each(|(k, v)| fs::rename(k, v)
-            .expect("error: unable to fulfill renaming operation"));
+    for (k, v) in rename_pairs {
+        if fs::rename(k, v).is_err() {
+            println!("error: unable to rename file \"{}\"", k.display());
+        }
+    }
 }
 
 fn main() {
     let args = Args::parse();
 
-    let new_name_list = get_new_name_list(&args.file);
-    let ren_file_list = get_file_list(&args.path);
+    let new_name_list = match get_new_name_list(&args.file) {
+        Ok(list) => list,
+        Err(error_message) => {
+            println!("{error_message}");
+            exit(1);
+        }
+    };
+    let ren_file_list = match get_file_list(&args.path) {
+        Ok(list) => list,
+        Err(error_message) => {
+            println!("{error_message}");
+            exit(1);
+        }
+    };
     if new_name_list.len() != ren_file_list.len() {
         println!("error: file list and new name list do not have the same number of items");
-        return;
+        exit(1);
     }
 
     let rename_pairs = make_rename_pair(&new_name_list, &ren_file_list);
