@@ -9,10 +9,10 @@ use clap::Parser;
 
 /// renls: rename all files in a directory with a list of names from a file or stdin
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(version, about, long_about = None)]
 struct Args {
     /// path to directory with files to be renamed
-    #[arg(short, long)]
+    #[arg(value_name = "DIR_PATH")]
     path: String,
     /// path to file with new name list (optional if piped through stdin)
     #[arg(short, long, default_value_t = String::new())]
@@ -28,12 +28,12 @@ fn get_new_name_list(file_path: &str) -> Result<Vec<String>, &str> {
          if atty::isnt(atty::Stream::Stdin) {
              Ok(read_input_stream(io::stdin()))
          } else {
-             Err("error: stdin buffer is empty")
+             Err("renls: error: stdin buffer is empty")
          }
     } else {
         match File::open(file_path) {
             Ok(file) => Ok(read_input_stream(file)),
-            Err(_) => Err("error: unable to read file"),
+            Err(_) => Err("renls: error: unable to read file"),
         }
     }
 }
@@ -59,7 +59,7 @@ fn get_file_list(dir_path: &str) -> Result<Vec<PathBuf>, &str>{
             file_list.sort();
             Ok(file_list)
         },
-        Err(_) => Err("error: unable to read directory"),
+        Err(_) => Err("renls: error: unable to read directory"),
     }
 }
 
@@ -91,7 +91,7 @@ fn print_rename_proposal(rename_pairs: &HashMap<PathBuf, PathBuf>) {
 fn rename_files(rename_pairs: &HashMap<PathBuf, PathBuf>) {
     for (k, v) in rename_pairs {
         if fs::rename(k, v).is_err() {
-            println!("error: unable to rename file \"{}\"", k.display());
+            println!("renls: error: unable to rename file \"{}\"", k.display());
         }
     }
 }
@@ -114,7 +114,7 @@ fn main() {
         }
     };
     if new_name_list.len() != ren_file_list.len() {
-        println!("error: file list and new name list do not have the same number of items");
+        println!("renls: error: file list and new name list do not have the same number of items");
         exit(1);
     }
 
