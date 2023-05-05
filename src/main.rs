@@ -91,7 +91,7 @@ fn print_rename_proposal(rename_pairs: &HashMap<PathBuf, PathBuf>) {
 fn rename_files(rename_pairs: &HashMap<PathBuf, PathBuf>) {
     for (k, v) in rename_pairs {
         if fs::rename(k, v).is_err() {
-            println!("renls: error: unable to rename file \"{}\"", k.display());
+            eprintln!("renls: warning: unable to rename file \"{}\"", k.display());
         }
     }
 }
@@ -102,19 +102,19 @@ fn main() {
     let new_name_list = match get_new_name_list(&args.file) {
         Ok(list) => list,
         Err(error_message) => {
-            println!("{error_message}");
+            eprintln!("{error_message}");
             exit(1);
         }
     };
     let ren_file_list = match get_file_list(&args.path) {
         Ok(list) => list,
         Err(error_message) => {
-            println!("{error_message}");
+            eprintln!("{error_message}");
             exit(1);
         }
     };
     if new_name_list.len() != ren_file_list.len() {
-        println!("renls: error: file list and new name list do not have the same number of items");
+        eprintln!("renls: error: file list and new name list do not have the same number of items");
         exit(1);
     }
 
